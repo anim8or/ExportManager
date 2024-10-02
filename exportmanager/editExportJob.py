@@ -328,10 +328,17 @@ class EditScreen(QMainWindow):
                     matchedKeys += 1
         QMessageBox.information(QWidget(),"number of keys matched:", str(exportoptions))
         QMessageBox.information(QWidget(),"number of keys in original data:", str((self.Editjob.exportoptions)))
-        
+        #output
+"""
+ new output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', 'JPEG DCT compression', 'Deflate(ZIP)', 'Lempel-Ziv & Welch', 'Pixar Log']], 'alpha': '', 'flatten': '', 'saveProfile': '', 'predictor': 0, 'bitdepth': [1, ['8', '16']]}
+old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', 'JPEG DCT compression', 'Deflate(ZIP)', 'Lempel-Ziv & Welch', 'Pixar Log']], 'alpha': True, 'flatten': True, 'saveProfile': True, 'predictor': 0, 'bitdepth': [1, ['8', '16']], 'deflate': 6, 'pixarlog': 6, 'quality': 80}
+
+"""      
         if matchedKeys == len(self.Editjob.exportoptions.keys()) :
             QMessageBox.information(QWidget(),"validating save data:", "VALIDATION PASSED")
             self.Editjob.exportoptions = exportoptions
+
+            """
        # self.reportexportData()            
         self.QueueMan.refreshTasks()
         self.close()
