@@ -266,7 +266,12 @@ class EditScreen(QMainWindow):
 
             if len(widgets) == 2:
                 if isinstance(widgets[1], QCheckBox):
-                    
+                    # this section reads in any check box from the front end. a 'check box' is a layout with 2 widgets inside.
+                    #widget 0 is a label that will serve as the key for the dict
+                    #widget 1 is th check box itself, we need only ready the checked() state of the button to retrn a boolean value that can be written straight into the dict.
+                    # at the moment I am writing to a new dict and then comparing the 2 to validate the data before writing it back out.
+                    # it currently doesnt add the econdary attributes, that can be fixed. what IS concerning is that even though it read the check state of the button 
+                    # and it will return debug messages confirming the state and type of checked state, when writing it out, the value is '' ( check line 329)
                     QMessageBox.information(QWidget(),"CHECKBOX DEBUG",(f"Widget 1: {widgets[1]}")) # Debug to check the checkbox
                     QMessageBox.information(QWidget(),"CHECKBOX DEBUG",(f"Is checked: {widgets[1].isChecked()}"))  # Debug to check its state
 
