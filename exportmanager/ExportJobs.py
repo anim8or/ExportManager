@@ -1,6 +1,13 @@
 from .ExportLibrary import *
 from krita import *
+class SecondaryAttributeBlock:
+    # a secoindary control block are a series of attributes that are optional and governed by the state of an existing attribute. they will appear in the UI if the uses brings up or enables the
+    # attribute that requies this optional attribute 
 
+    def __init__(self):
+        self.control = "" # name of the control these attributes are controlled by
+        self.attributes ={} # dictionary of attribute arguments controlled by the control
+        
 class ExportJob:
     def __init__(self):
         
@@ -17,6 +24,7 @@ class ExportJob:
         self.Iconlist = self.EL.collectIcons()  # calling EL method
         self.ExportFilename = ""  # override export filename
         self.ExportLocation = ""  # override default export location
+        self.secondaryAttributes = SecondaryAttributeBlock()
         self.exportoptions = {
             "fileName": "",
             "filePath": ""
@@ -26,6 +34,12 @@ class ExportJob:
             return instance
         def __init__(self):
             pass
+    def hasSecondaryAttrib(self):
+        if len(self.secondaryAttributes)== 0:
+            return (False)
+        else:
+            return(True)
+        
     def setName(self,name):
         self.JobName =name
     def setIcon(self,iconpath):
@@ -43,6 +57,7 @@ class ExportBMP (ExportJob):
         self.jobType = "bmp"
         self.jobtitle ="Export to .bmp"
         self.JobFormat = "bmp"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self, index):
         #perform the export job here
         application = Krita.instance()
@@ -65,6 +80,7 @@ class ExportGIF (ExportJob):
         self.jobType = "gif"
         self.jobtitle ="Export to .gif"
         self.JobFormat = "gif"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self, index):
         #perform the export job here
         application = Krita.instance()
@@ -87,6 +103,7 @@ class ExportICO (ExportJob):
         self.jobType = "ico"
         self.jobtitle ="Export to .ico"
         self.JobFormat = "ico"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self, index):
         #perform the export job here
         application = Krita.instance()
@@ -109,6 +126,7 @@ class ExportJPG (ExportJob):
         self.jobType = "jpg"
         self.jobtitle ="Export to .jpg"
         self.JobFormat = "jpg"
+        self.secondaryAttributes = SecondaryAttributeBlock()
         self.exportoptions.update({
         "quality":85,
         "smoothing":5,
@@ -136,7 +154,6 @@ class ExportJPG (ExportJob):
         image.setBatchmode(True)
         outputName =outputlocation + "/"+ outputFilename
         newDocument = image.exportImage(outputName,jpgOptions)                                  
-            
 
 
 class ExportPDF(ExportJob):
@@ -145,6 +162,7 @@ class ExportPDF(ExportJob):
         self.jobType = "pdf"
         self.jobtitle ="Export to .pdf"
         self.JobFormat = "pdf"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self,index):
         #perform the export job here
         print("FOOPDF")
@@ -155,6 +173,7 @@ class ExportPNG (ExportJob):
         self.jobType = "png"
         self.jobtitle = "Export to .png"
         self.JobFormat = "png"
+        self.secondaryAttributes = SecondaryAttributeBlock()
         self.exportoptions.update({
             "compression": 3,
             "indexed": False,
@@ -196,6 +215,7 @@ class ExportPSD (ExportJob):
         self.jobType = "psd"
         self.jobtitle ="Export to .psd"
         self.JobFormat = "psd"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self,index):
         #perform the export job here
         application = Krita.instance()
@@ -218,6 +238,7 @@ class ExportTGA (ExportJob):
         self.jobType = "tga"
         self.jobtitle ="Export to .tga"
         self.JobFormat = "tga"
+        self.secondaryAttributes = SecondaryAttributeBlock()
     def doJob(self,index):
         #perform the export job here
         application = Krita.instance()
@@ -234,45 +255,47 @@ class ExportTGA (ExportJob):
         outputName =outputlocation + "/"+ outputFilename
         newDocument = image.exportImage(outputName,InfoObject())
         
-class ExportTIF (ExportJob):
+class ExportTIF(ExportJob):
     def __init__(self):
-        super().__init__()  # Initialize parent class attributes
-        self.secondaryAttribute = "compressiontype" # all seconday attributes are assigned to this widget
+        super().__init__()
+        self.secondaryAttribute = "compressiontype"
         self.jobType = "tif"
-        self.jobtitle ="Export to .tif"
+        self.jobtitle = "Export to .tif"
         self.JobFormat = "tif"
-        self.compressionTypes=["NONE","JPEG DCT compression","Deflate(ZIP)","Lempel-Ziv & Welch","Pixar Log"]
-        self.PredictorTypes = ["None","Horizontal Diferencing"]
-        self.BitDepths=["8","16"]
-        self.optionToggle ={"NONE":["alpha","flatten","saveProfile"],
-                            "JPEG DCT compression":["alpha","flatten","saveProfile","quality"],
-                            "Deflate(ZIP)":["alpha","flatten","saveProfile","deflate"],
-                            "Lempel-Ziv & Welch":["alpha","flatten","saveProfile"],
-                            "Pixar Log":["alpha","flatten","saveProfile""pixarlog"]
-                            }
-        self.exportoptions.update({
-            "compressiontype":[3,["NONE","JPEG DCT compression","Deflate(ZIP)","Lempel-Ziv & Welch","Pixar Log"]],
-            "alpha": True,
-            "flatten":True,
-            "saveProfile":True, 
-            "predictor":0,
-            "bitdepth": [1,["8","16"]],
-            "deflate":6,
-            "pixarlog":6,
-            "quality":80
-            })
-        self.secondaryAttributes ={
-            "JPEG DCT compression":["quality"],
-            "Deflate(ZIP)":["deflate"],
-            "Pixar Log":["pixarlog"]
-            }
+        self.compressionTypes = ["NONE", "JPEG DCT compression", "Deflate(ZIP)", "Lempel-Ziv & Welch", "Pixar Log"]
+        self.PredictorTypes = ["None", "Horizontal Diferencing"]
+        self.BitDepths = ["8", "16"]
         
-    #OK so the export options enabled/disabled depending on what opitons are selected
-    #for example, setting export to jpg will show jpg compression setting,
-    #setting deflate will show deflate value
-    #setting lzw only show base settings
-    # setting pixar show pixar log setting
-    
+        # Options related to different compression types
+        self.optionToggle = {
+            "NONE": ["alpha", "flatten", "saveProfile"],
+            "JPEG DCT compression": ["alpha", "flatten", "saveProfile", "quality"],
+            "Deflate(ZIP)": ["alpha", "flatten", "saveProfile", "deflate"],
+            "Lempel-Ziv & Welch": ["alpha", "flatten", "saveProfile"],
+            "Pixar Log": ["alpha", "flatten", "saveProfile", "pixarlog"]
+        }
+        
+        self.exportoptions = {
+            "compressiontype": [3, ["NONE", "JPEG DCT compression", "Deflate(ZIP)", "Lempel-Ziv & Welch", "Pixar Log"]],
+            "alpha": True,
+            "flatten": True,
+            "saveProfile": True,
+            "predictor": 0,
+            "bitdepth": [1, ["8", "16"]],
+            "deflate": 6,
+            "pixarlog": 6,
+            "quality": 80
+        }
+        
+        # Secondary attributes mapping for different compression types
+        self.secondaryAttributes = SecondaryAttributeBlock
+        self.secondaryAttributes.control = "compressiontype"
+        self.secondaryAttributes.attributes ={
+            "JPEG DCT compression": ["quality"],
+            "Deflate(ZIP)": ["deflate"],
+            "Pixar Log": ["pixarlog"]
+        }
+
         
     def doJob(self,index):
         #perform the export job here

@@ -4,7 +4,11 @@ from PyQt5 import uic
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtSvg import QSvgRenderer
+from PyQt5.QtCore import QTimer
+
 import os
+
+
 
 class FontSelectorWidget(QWidget):
     def __init__(self,fontname):
@@ -56,87 +60,98 @@ class Qddlist(QComboBox):
     def __init__(self, color=[0, 0, 255], parent=None):
         super().__init__(parent)
         self.ddl= True
-        
-    def setItem(self,item):
-        if type(item) == str:
-            for i in range( self.count()):
-                if  self.itemText(i) == item:
-                    self.setCurrentIndex(i)
-        else:
-            self.setCurrentIndex(index)
-            
-class Compresslist(QComboBox):
-    def __init__(self, color=[0, 0, 255], parent=None):
-        super().__init__(parent)
-        self.ddl= True
-        self.activeSecondaryAttributes=[] # all secondary attributes currntly being displayed
-        self.secondaryAttributes = {}
-        self.AttributeHolder = []
-        self.extraAttributes = []
-        self.parentWindow = None
-        self.SecondaryLayout =NamedHBoxLayout("secondary items")
-
-    def setItem(self,item):
-        if type(item) == str:
-            for i in range( self.count()):
-                if  self.itemText(i) == item:
-                    self.setCurrentIndex(i)
-        else:
-            self.setCurrentIndex(index)
-            
-    def clear_layout(self, layout):
-        """Helper function to remove widgets from a layout."""
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-                widget.deleteLater()
-                
-    # Function to hide all widgets in the layout
-    def hide_layout_widgets(self,layout):
-        for i in range(layout.count()):
-            widget = layout.itemAt(i).widget()
-            if widget is not None:
-                widget.hide()
-                
-    # Function to show all widgets in the layout
-    def show_layout_widgets(self,layout):
-        for i in range(layout.count()):
-            widget = layout.itemAt(i).widget()
-            if widget is not None:
-                widget.show()    
-                
-    def index_changed(self, index):
-        #QMessageBox.information(QWidget(),"adding job type:","index changed")  
-        #clear secondary attribute widgets
-        
-        while self.activeSecondaryAttributes:
-            layout_to_remove = self.activeSecondaryAttributes.pop(0)
-            self.hide_layout_widgets(layout_to_remove)
-            # Remove the layout from main layout
-            self.parentWindow.removeItem(layout_to_remove)
-            # Move layout to the removed list
-            self.AttributeHolder.append(layout_to_remove)
-        #populate secondary attribute widgets
-        for f in range(len(self.AttributeHolder)-1, -1, -1):
-            #QMessageBox.information(QWidget(),"adding job type:",self.AttributeHolder[f].attribute) 
-            if self.AttributeHolder[f].attribute == str(self.currentText()):
-                item = self.AttributeHolder.pop(f)
-                self.parentWindow.addLayout(item)
-                self.activeSecondaryAttributes.append(item)
-                self.show_layout_widgets(item)
     def getListValues(self):
-        x = self.currentIndex()
+        return([self.itemText(i) for i in range(self.count())])
+    def getSelected(self):
+        return (self.currentIndex())
+            
+    def setItem(self,item):
+        if type(item) == str:
+            for i in range( self.count()):
+                if  self.itemText(i) == item:
+                    self.setCurrentIndex(i)
+        else:
+            self.setCurrentIndex(index)
+      
 
-        # Get a list of all items in the combobox
-        y = [self.itemText(i) for i in range(self.count())]
+class Compresslist(QComboBox):
+    def __init__(self):
+        super().__init__()
+        self.ddl= True
+        self.secondaryControls = {}  # Map compression type -> associated widgets
+        self.secondaryAttributes ={}
+        QTimer.singleShot(0, self.register_secondary_controls)
+        QTimer.singleShot(0, self.setUpConnections)
+    def getListValues(self):
+        return([self.itemText(i) for i in range(self.count())])
+    def getSelected(self):
+        return (self.currentIndex())
+        
+        
+        
+        
+    def setUpConnections (self):
+        self.currentIndexChanged.connect(self.toggle_secondary_controls)
+        
+    def register_secondary_controls(self):
+        """
+        Register a dictionary mapping combobox items to the widgets that should be toggled.
+        Example: {"None": [widget1, widget2], "LZW": [widget3, widget4]}
+        """
+        #self.secondaryControls = mapping
+        parent = self.parentWidget()  # Get the parent widget
+        layout = parent.layout()  # Get the layout of the parent widget
+        name = parent.objectName()
+        MainLayout = layout.itemAt(0)
+        for i in range(MainLayout.count()):
+            for key, value in self.secondaryAttributes.attributes.items():
+                for v in value:
+                    if MainLayout.itemAt(i).name ==str(v):
+                        self.secondaryControls[key] = MainLayout.itemAt(i)
+        #QMessageBox.information(QWidget(),"COMPRESSLIST",str(self.secondaryControls))
+        self.toggle_secondary_controls()
 
-        # Output the result in the desired format
-        result = [x, y]
-        return (result)
+    def refresh_seconday_controls(self):
+        for layout in self.secondaryControls[self.currentText()]:
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                widget = item.widget()
+                if widget:
+                    widget.show()
+        
+    def toggle_secondary_controls(self):
+        """
+        Toggle the visibility of secondary controls based on the selected combobox item.
+        """
+        #selected_item = self.itemText(index)
+        # Hide all widgets
+        for layout in self.secondaryControls.values():
+ 
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                widget = item.widget()
+                if widget:
+                    try:
+                        widget.hide()
+                    except:
+                        pass
+        try:  
+            #get the ui to show, ising current text as the key for the self.secondaryAttributes.attributes.  
+            if self.currentText() in  self.secondaryAttributes.attributes.keys():
+                layoutlist= self.secondaryAttributes.attributes[self.currentText()]
+                for layoutToShow in layoutlist: 
+                    for layouts in self.secondaryControls.values():
+                        if str(layouts.name) == str(layoutToShow):
+                            for i in range(layouts.count()):
+                                item = layouts.itemAt(i)
+                                widget = item.widget()
+                                if widget:
+                                    widget.show()
 
-    
+        except:
+            pass            
+
+
 class ColorSwatchButton(QPushButton):
     def __init__(self, color=[0, 0, 255], parent=None):
         super().__init__(parent)
@@ -179,6 +194,7 @@ class EditScreen(QMainWindow):
         self.loadExportData()
         #connect UI elements
         self.btn_EditJob.clicked.connect(self.writeOutExportData)
+   
     def setListView(self,Listwidget):
         self.ListWindow = Listwidget
         
@@ -207,139 +223,47 @@ class EditScreen(QMainWindow):
         
         layerchildren = self.verticalLayout_5.children()
         for l in layerchildren:
-            #check to see if there are any secondary attributes assigned to the widget
-            # if there are  then write out these wid
             widgets = []
-
             for i in range(l.count()):
                 item = l.itemAt(i)
                 widget = item.widget()
 
                 if widget is not None:
                     widgets.append(widget)
-            #performs a quick check here to see if there are an secondary attributes associated with the control.
-            #if there are write them all out  
-            for w in widgets:
-                #QMessageBox.information(QWidget(),"111:", str(w))
-                if hasattr(w,'secondaryAttributes'):
-                    
-                    #get all the ui objects in the scondray attributes list
-                    for x in w.AttributeHolder:
-                        secondaryAttributes = []
-                        for i in range(x.count()):
-                            item = l.itemAt(i)
-                            widget = item.widget()
-                            if widget is not None:
-                                secondaryAttributes.append(widget)
-                        QMessageBox.information(QWidget(),"SECONDARY INFO:", str(len(secondaryAttributes)))
-                        if hasattr(secondaryAttributes[1], 'text'):
-                            exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].text()
-                        if hasattr(secondaryAttributes[1], 'value'):
-                            exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].value()
-                        if hasattr(secondaryAttributes[1], 'current_color'):
-                            exportoptions[ "transparencyFillcolor" ]=secondaryAttributes[1].getRGB()
-                        if hasattr(secondaryAttributes[1], 'Font'):
-                            exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].Font
-                        for x in w.activeSecondaryAttributes:
-                            secondaryAttributes = []
-                            for i in range(x.count()):
-                                item = l.itemAt(i)
-                                widget = item.widget()
-                                if widget is not None:
-                                    secondaryAttributes.append(widget)
-                            QMessageBox.information(QWidget(),"SECONDARY INFO:", str(len(secondaryAttributes)))
-                            if hasattr(secondaryAttributes[1], 'text'):
-                                exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].text()
-                            if hasattr(secondaryAttributes[1], 'value'):
-                                exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].value()
-                            if hasattr(secondaryAttributes[1], 'current_color'):
-                                exportoptions[ "transparencyFillcolor" ]=secondaryAttributes[1].getRGB()
-                            if hasattr(secondaryAttributes[1], 'Font'):
-                                exportoptions[ secondaryAttributes[0].text()]=secondaryAttributes[1].Font
-                                
-            ##QMessageBox.information(QWidget(),"222:", str(w))            
+           
             if len(widgets) == 1:
                 if hasattr(widgets[0], 'isChecked'):
                     key = widgets[0].text().replace('&', '')  # Remove ampersand
                     value = widgets[0].isChecked()  # Get checkbox state
                     exportoptions[key] = False 
-
+                    continue 
             if len(widgets) == 2:
+                
                 if isinstance(widgets[1], QCheckBox):
-                    # this section reads in any check box from the front end. a 'check box' is a layout with 2 widgets inside.
-                    #widget 0 is a label that will serve as the key for the dict
-                    #widget 1 is th check box itself, we need only ready the checked() state of the button to retrn a boolean value that can be written straight into the dict.
-                    # at the moment I am writing to a new dict and then comparing the 2 to validate the data before writing it back out.
-                    # it currently doesnt add the econdary attributes, that can be fixed. what IS concerning is that even though it read the check state of the button 
-                    # and it will return debug messages confirming the state and type of checked state, when writing it out, the value is '' ( check line 329)
-                    QMessageBox.information(QWidget(),"CHECKBOX DEBUG",(f"Widget 1: {widgets[1]}")) # Debug to check the checkbox
-                    QMessageBox.information(QWidget(),"CHECKBOX DEBUG",(f"Is checked: {widgets[1].isChecked()}"))  # Debug to check its state
-
-                    key = widgets[0].text().replace('&', '')  # Clean key from the label
-                    value = True#widgets[1].isChecked()  # Directly assign the checkbox state
-                    QMessageBox.information(QWidget(),"KEY DEBUG",(f"Key: '{key}'"))
-                    QMessageBox.information(QWidget(),"KEY DEBUG",(f"Key: '{widgets[0].text()}'"))
-                    QMessageBox.information(QWidget(),"Value Type Check", (f"value: '{value}', type: {type(value)}"))
-                    
-
-                    exportoptions[key] = value  # Update the dictionary with key-value pair
-                    QMessageBox.information(QWidget(),"**Value Type Check", (f"value: '{value}', type: {type(exportoptions[key])}"))
-                    
-                    
-                    
-                    if widgets[1].isTristate():
-                        QMessageBox.information(QWidget(), "button is tri state")
-                    # Debugging: Show QMessageBox to confirm correct behavior
-                    QMessageBox.information(QWidget(), "Key", f"Key: '{key}'")
-                    QMessageBox.information(QWidget(), "Value", f"Value: {value}")
-
-
+                    self.Editjob.exportoptions[widgets[0].text()] = widgets[1].isChecked()
+                    continue 
                 if hasattr(widgets[1], 'ddl'):
                     # we need the current selection then an array of all the items in the list 
-                    exportoptions[ widgets[0].text()]=(widgets[1].getListValues())
+                    self.Editjob.exportoptions[ widgets[0].text()]=[widgets[1].getSelected(),(widgets[1].getListValues())]
+                    continue 
                     #self.Editjob.exportoptions[ widgets[0].text()]=widgets[1].currentText()
-                if hasattr(widgets[1], 'text'):
-                    exportoptions[ widgets[0].text()]=widgets[1].text()
-                if hasattr(widgets[1], 'value'):
-                    #QMessageBox.information(QWidget(),"adding job type:", widgets[0].text()) ## should be a spin box yalue
-                    exportoptions[ widgets[0].text()]=widgets[1].value()
+
+
+                if isinstance(widgets[1], QLineEdit):
+                    #QMessageBox.information(QWidget(),"saving:",str("writing out text"))
+                    self.Editjob.exportoptions[ widgets[0].text()]=widgets[1].text()
+                    continue 
+                if isinstance(widgets[1], QSpinBox):
+                    #QMessageBox.information(QWidget(),"saving:",str("writing out value"))
+                    self.Editjob.exportoptions[ widgets[0].text()]=widgets[1].value()
+                    continue 
                 if hasattr(widgets[1], 'current_color'):
-                    exportoptions[ "transparencyFillcolor" ]=widgets[1].getRGB()
+                    self.Editjob.exportoptions[ "transparencyFillcolor" ]=widgets[1].getRGB()
+                    continue 
                 if hasattr(widgets[1], 'Font'):
-                    exportoptions[ widgets[0].text()]=widgets[1].Font
-            if len(widgets) == 3:
-                if hasattr(widgets[1], 'isChecked'):
-                    key = widgets[0].text().replace('&', '')  # Remove ampersand
-                    value = widgets[1].isChecked()  # Get checkbox state
-                    exportoptions[key] = False 
-                if hasattr(widgets[1], 'ddl'):
-                    QMessageBox.information(QWidget(),"adding job type:", "dropdown list foundBBBB")
-                    exportoptions[ widgets[0].text()]=(widgets[1].getListValues())
-                if hasattr(widgets[1], 'text'):
-                    exportoptions[ widgets[0].text()]=widgets[1].text()
-                if hasattr(widgets[1], 'value'):
-                    exportoptions[ widgets[0].text()]=widgets[1].value()  
-        #save data validation
-        matchedKeys =0
-        for k in self.Editjob.exportoptions.keys():
-            for m in exportoptions.keys():
-                #ok check the value type against the original value
-                if type (self.Editjob.exportoptions[k]) ==  type (exportoptions[m]):       
-                    matchedKeys += 1
-        QMessageBox.information(QWidget(),"number of keys matched:", str(exportoptions))
-        QMessageBox.information(QWidget(),"number of keys in original data:", str((self.Editjob.exportoptions)))
-        #output
-"""
- new output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', 'JPEG DCT compression', 'Deflate(ZIP)', 'Lempel-Ziv & Welch', 'Pixar Log']], 'alpha': '', 'flatten': '', 'saveProfile': '', 'predictor': 0, 'bitdepth': [1, ['8', '16']]}
-old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', 'JPEG DCT compression', 'Deflate(ZIP)', 'Lempel-Ziv & Welch', 'Pixar Log']], 'alpha': True, 'flatten': True, 'saveProfile': True, 'predictor': 0, 'bitdepth': [1, ['8', '16']], 'deflate': 6, 'pixarlog': 6, 'quality': 80}
+                    self.Editjob.exportoptions[ widgets[0].text()]=widgets[1].Font
+                    continue 
 
-"""      
-        if matchedKeys == len(self.Editjob.exportoptions.keys()) :
-            QMessageBox.information(QWidget(),"validating save data:", "VALIDATION PASSED")
-            self.Editjob.exportoptions = exportoptions
-
-            """
-       # self.reportexportData()            
         self.QueueMan.refreshTasks()
         self.close()
         
@@ -362,7 +286,6 @@ old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', '
             queryLayout.addWidget(spin_box)
             return([queryLayout,spin_box])
         if type (value) is bool:
-
             queryLayout = NamedHBoxLayout(key)
             checkbox= QCheckBox()
             checkbox.setChecked(value)
@@ -371,6 +294,7 @@ old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', '
             queryLayout.addWidget(checkbox)
             return([queryLayout,checkbox])
         if type (value) is list:
+
             if len(value) ==3:
                 layout = NamedHBoxLayout(key)
                 colorButton = ColorSwatchButton(color=value)
@@ -381,20 +305,33 @@ old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', '
                 spacer_expanding = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
                 layout.addSpacerItem(spacer_expanding)
                 return([layout,colorButton])
-            if len(value) ==2:
-                layout = NamedHBoxLayout(key)
-                ddl = Compresslist()
-                ddl.addItems(self.Editjob.exportoptions[key][1])
-                ddl.setCurrentIndex(self.Editjob.exportoptions[key][0])
-                ddl.currentIndexChanged.connect(ddl.index_changed)
-                ddl.parentWindow = layout
-                label = QLabel(key)
-                ddl.secondaryAttributes = self.Editjob.secondaryAttributes 
-                layout.addWidget(label)
-                layout.addWidget(ddl)
-                secondarylayout = NamedHBoxLayout("secondaryAttributes")
-                layout.addLayout(secondarylayout)
-                return([layout,ddl])
+            else:
+                if len(value[1]) >3:
+
+                    #add a compress list
+                    layout = NamedHBoxLayout(key)
+                    ddl = Compresslist()
+                    ddl.addItems(self.Editjob.exportoptions[key][1])
+                    ddl.setCurrentIndex(self.Editjob.exportoptions[key][0])
+                    #ddl.currentIndexChanged.connect(ddl.index_changed)
+                    ddl.parentWindow = layout
+                    label = QLabel(key)
+                    ddl.secondaryAttributes = self.Editjob.secondaryAttributes 
+                    layout.addWidget(label)
+                    layout.addWidget(ddl)
+                    secondarylayout = NamedHBoxLayout("secondaryAttributes")
+                    layout.addLayout(secondarylayout)
+                    return([layout,ddl])
+                else:
+                    layout = NamedHBoxLayout(key)
+                    ddl = Qddlist() # HERE! CHANGE THE OBJECT HERE TO A QDDL!!!!!
+                    ddl.addItems(self.Editjob.exportoptions[key][1])
+                    ddl.setCurrentIndex(self.Editjob.exportoptions[key][0])
+                    label = QLabel(key)
+                    layout.addWidget(label)
+                    layout.addWidget(ddl)
+                    return([layout,ddl])
+                
         if value == "Font":
             layout = NamedHBoxLayout(key)
             layout.addWidget(QLabel(key))
@@ -405,10 +342,14 @@ old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', '
             spacer_expanding = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
             layout.addSpacerItem(spacer_expanding)
             return([layout,fontlist])
+            
     def reportexportData(self):
         for opt in self.Editjob.exportoptions:
             QMessageBox.information(QWidget(),"Reporting EXport data",opt + ": "+str(self.Editjob.exportoptions[opt]) )
+
     def loadExportData(self):
+        
+        #QMessageBox.information(QWidget(),"loading export jobs:",str(self.Editjob.exportoptions))
         #load in the icon from the job and resize/apply it here
         pixmap = QPixmap(60, 60)
         pixmap.fill(Qt.transparent)  # Make the pixmap transparent
@@ -440,28 +381,20 @@ old output    {'fileName': '', 'filePath': '', 'compressiontype': [3, ['NONE', '
         self.hasSecondaryAttrib = hasattr(self.Editjob,'secondaryAttributes')# sets a flag to be true  if there are selection sensitive attributes or false if not
         self.secondarylist = []
         #self.reportexportData()
-        if self.hasSecondaryAttrib:
-            self.secondarylist = self.getflatvalues(self.Editjob.secondaryAttributes)
+        if self.Editjob.hasSecondaryAttrib:
+            self.secondarylist = self.getflatvalues(self.Editjob.secondaryAttributes.attributes)
         for f in self.Editjob.exportoptions.keys():
-            
-            if f not in self.secondarylist:
-                ctrl =self.getControl(f,self.Editjob.exportoptions[f])
-                if type(self.Editjob.exportoptions[f]) is str:
-                    if f == "filePath":
-                        newButton =QPushButton("Set location/filename")
-                        newButton.clicked.connect(self.setsaveLocation)
-                        ctrl[0].addWidget(newButton)
-                    if f == self.Editjob.secondaryAttributes:
-                        ctrl[1].parentWindow = ctrl[1]
-                        ctrl[1].secondaryAttributes = self.Editjob.secondaryAttribute
-                        attribs = QWidget()    
-                        ctrl[0].addWidget(newButton)
-                        
-                if f == self.Editjob.secondaryAttribute:  
-                    for key in self.Editjob.secondaryAttributes.keys() :
-                        test= self.Editjob.secondaryAttributes[key]
-                        for n in self.Editjob.secondaryAttributes[key]:
-                            newCtrl = self.getControl(n,self.Editjob.exportoptions[n])[0]
-                            newCtrl.attribute = key
-                            ctrl[1].AttributeHolder.append(newCtrl)
-                self.verticalLayout_5.addLayout(ctrl[0])
+            #if f not in self.secondarylist:
+            ctrl =self.getControl(f,self.Editjob.exportoptions[f])
+            if type(self.Editjob.exportoptions[f]) is str:
+                if f == "filePath":
+                    newButton =QPushButton("Set location/filename")
+                    newButton.clicked.connect(self.setsaveLocation)
+                    ctrl[0].addWidget(newButton)
+                if f == self.Editjob.secondaryAttributes:
+                    ctrl[1].parentWindow = ctrl[1]
+                    ctrl[1].secondaryAttributes = self.Editjob.secondaryAttributes
+                    attribs = QWidget()    
+                    ctrl[0].addWidget(newButton)
+
+            self.verticalLayout_5.addLayout(ctrl[0])

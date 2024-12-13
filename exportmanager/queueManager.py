@@ -10,53 +10,54 @@ class exportTaskListItem(QListWidgetItem):
 class TaskQueue():
     EL=ExportLibrary()
     IconList = EL.collectIcons()
-    #IconList ={"FOO":"bmplocatioN"}
     window =None
     tasklist = [] #a list of all the jobs in the queue
     def __init__(self):
         pass
 
-                #self.Combobox = window
-    def MoveTaskUp(self,initialIndex):
-        if initialIndex >0:
-            element = self.tasklist.pop(initialIndex)        
-            new_position = initialIndex-1
-            self.tasklist.insert(new_position, element)
+    def MoveTaskUp(self):
+        currentRow = self.window.currentRow()
+        currentItem=self.window.takeItem(currentRow)
+        self.window.insertItem(currentRow - 1, currentItem)
 
-    def MoveTaskDown(self,initialIndex):
-        if initialIndex < len(self.tasklist):
-            element = self.tasklist.pop(initialIndex)        
-            new_position = initialIndex+1
-            self.tasklist.insert(new_position, element)
-    def DeleteTask(self,initialIndex):
-        self.tasklist.pop(initialIndex)
+    def MoveTaskDown(self):
+        currentRow = self.window.currentRow()
+        currentItem=self.window.takeItem(currentRow)
+        self.window.insertItem(currentRow + 1, currentItem)
+    def DeleteTask(self):
+        listItems=self.window.selectedItems()
+        if not listItems: return        
+        for item in listItems:
+            self.window.takeItem(self.window.row(item))
     def runTasks(self):
         for f in self.tasklist:
             f.doJob()
     def addTask(self,Jobname,jobform):
-        ef =ExportFactory()
-        task = ef.getjob(jobform)
-        task.JobName = Jobname
-        task.JobFormat = jobform
-        task.JobIcon = self.IconList[jobform]
+        #QMessageBox.information(QWidget(),"Adding Task", str(jobform[0]))
+        task =ExportFactory(jobform[1])
+        task.setName(Jobname)
+        task.JobIcon = self.IconList[jobform[0]]
         self.tasklist.append(task)
         icon = QIcon(task.JobIcon)
         size = QSize(20, 20)
         newitem = exportTaskListItem(Jobname, self.window)
         newitem.exportjob = task
         newitem.setIcon(icon)
+    def refreshTasks(self):
+        for i in range(self.window.count()):
+            self.window.item(i).setText(self.window.item(i).exportjob.JobName)
+        
     def listTasks(self):
         for l in self.tasklist:
             print(l.JobIcon)
       
 
+    def processQueue(self,count) :
+        for i in range(self.window.count()):
+            self.window.item(i).exportjob.doJob(count)
+        
 
 
 
-
-
-test = TaskQueue()
-
-#test.addTask("TESTjob","bmp","bmp")
 
 
